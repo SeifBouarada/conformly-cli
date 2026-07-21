@@ -1,0 +1,38 @@
+{
+  "name": "conformly",
+  "version": "0.1.0",
+  "description": "CLI de scan d'accessibilité RGAA/WCAG — vérifiez une URL en ligne de commande, idéal en CI. Sans compte.",
+  "type": "module",
+  "bin": {
+    "conformly": "bin/conformly.mjs"
+  },
+  "files": [
+    "bin",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "accessibility",
+    "accessibilité",
+    "rgaa",
+    "wcag",
+    "a11y",
+    "audit",
+    "ci",
+    "cli",
+    "conformly"
+  ],
+  "homepage": "https://conformly.online",
+  "bugs": {
+    "url": "https://conformly.online"
+  },
+  "author": "Conformly (https://conformly.online)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SeifBouarada/conformly-cli.git"
+  }
+}
