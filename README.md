@@ -25,15 +25,47 @@ npx conformly scan https://your-site.com --threshold 90
 npx conformly scan https://your-site.com --json
 ```
 
-### In CI (GitHub Actions)
+## GitHub Action
 
 ```yaml
 - name: Accessibility check
-  run: npx conformly scan https://your-site.com --threshold 90
+  uses: SeifBouarada/conformly-cli@v1
+  with:
+    url: https://your-site.com
+    threshold: 90   # optional: fail the job below this RGAA score
 ```
 
-Exit code `1` when the score is below the threshold → your pipeline fails, just like a
-broken test. Works the same in GitLab CI, CircleCI, etc.
+The step fails when the score is below `threshold`, just like a broken test, and writes the
+score to the job summary. Leave `threshold` empty to report without failing.
+
+| Input | Required | Description |
+|---|---|---|
+| `url` | yes | Public URL to scan. |
+| `threshold` | no | Minimum RGAA score (0–100). Empty = report only. |
+
+| Output | Description |
+|---|---|
+| `score` | RGAA score (0–100) on the automatable criteria. |
+| `anomalies` | Number of anomalies found (one per affected element). |
+
+```yaml
+- id: a11y
+  uses: SeifBouarada/conformly-cli@v1
+  with:
+    url: ${{ steps.deploy.outputs.preview-url }}
+- run: echo "Accessibility score: ${{ steps.a11y.outputs.score }} %"
+```
+
+The action runs the CLI shipped in the tagged release (Node, preinstalled on GitHub-hosted
+runners): nothing is downloaded at run time.
+
+### Other CI (GitLab, CircleCI…)
+
+```yaml
+- npx conformly scan https://your-site.com --threshold 90
+```
+
+Exit code `1` when the score is below the threshold → your pipeline fails.
 
 ## Options
 

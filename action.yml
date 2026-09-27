@@ -1,0 +1,70 @@
+name: Conformly accessibility scan
+description: Scan a URL for RGAA / WCAG accessibility issues and fail the build below a score threshold. Free, no account.
+author: Conformly
+
+branding:
+  icon: check-circle
+  color: green
+
+inputs:
+  url:
+    description: Public URL to scan (rendered in a real browser, so SPAs are analysed properly).
+    required: true
+  threshold:
+    description: Minimum RGAA score (0-100). The step fails when the score is below it. Empty = report only, never fail on score.
+    required: false
+    default: ""
+
+outputs:
+  score:
+    description: RGAA score (0-100) measured on the automatable criteria. Empty if the scan could not run.
+    value: ${{ steps.scan.outputs.score }}
+  anomalies:
+    description: Number of accessibility anomalies found (one per affected element).
+    value: ${{ steps.scan.outputs.anomalies }}
+
+runs:
+  using: composite
+  steps:
+    - id: scan
+      shell: bash
+      # Inputs go through env, never interpolated into the script: a URL is user input.
+      env:
+        INPUT_URL: ${{ inputs.url }}
+        INPUT_THRESHOLD: ${{ inputs.threshold }}
+      run: |
+        # Runs the CLI shipped in this tag — same code as `npx conformly`, nothing downloaded.
+        args=(scan "$INPUT_URL" --json)
+        if [ -n "$INPUT_THRESHOLD" ]; then args+=(--threshold "$INPUT_THRESHOLD"); fi
+
+        set +e
+        out="$(node "$GITHUB_ACTION_PATH/bin/conformly.mjs" "${args[@]}")"
+        code=$?
+        set -e
+        [ -n "$out" ] && echo "$out"
+
+        field() {
+          printf '%s' "$out" | node -e '
+            let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", () => {
+              try { const v = JSON.parse(s)[process.argv[1]]; process.stdout.write(v == null ? "" : String(v)); } catch {}
+            });' "$1"
+        }
+        score="$(field score)"
+        anomalies="$(field anomalies)"
+        echo "score=$score" >> "$GITHUB_OUTPUT"
+        echo "anomalies=$anomalies" >> "$GITHUB_OUTPUT"
+
+        {
+          echo "### Conformly — accessibility scan"
+          echo
+          echo "| URL | RGAA score | Anomalies | Threshold |"
+          echo "|---|---|---|---|"
+          echo "| $INPUT_URL | ${score:-—}${score:+ %} | ${anomalies:-—} | ${INPUT_THRESHOLD:-none} |"
+          echo
+          if [ "$code" -ne 0 ] && [ -n "$score" ]; then echo "**Failed:** score below the threshold."; fi
+          if [ "$code" -ne 0 ] && [ -z "$score" ]; then echo "**Failed:** the scan could not run (see the step log)."; fi
+          echo
+          echo "Automated testing covers only part of RGAA / WCAG: treat the score as a regression signal, not a certification. Full report and fix guides: [conformly.online](https://conformly.online)."
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        exit "$code"
